@@ -1,0 +1,18 @@
+namespace packets;
+
+attribute "priority";
+
+enum Type:byte { State = 0, Connection,Ack=2 }
+
+struct Vec2 {
+  x:float;
+  y:float;
+}
+
+table Packet {
+  type:Type;
+  sequenceNumber:uint32;
+  position:Vec2;
+}
+
+root_type Packet;

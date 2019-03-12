@@ -1,0 +1,14 @@
+namespace conPackets;
+
+attribute "priority";
+
+  enum Type:byte { State = 0, Connection,Ack=2 }
+
+table  ConPacket {
+  type:Type;
+  sequenceNumber:uint32;
+  token:string;
+  encryptionKey:string;
+}
+
+root_type ConPacket;

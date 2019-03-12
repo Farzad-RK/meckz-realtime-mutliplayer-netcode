@@ -1,0 +1,12 @@
+namespace ack;
+
+attribute "priority";
+
+enum Type:byte { State = 0, Connection=1,Ack=2 }
+
+table Ack {
+  type:Type;
+  sequenceNumber:uint32;
+}
+
+root_type Ack;
