@@ -51,13 +51,23 @@ import (
 		 }
 		 time.Sleep(time.Millisecond*250)
 	 }
+	 go sendState(connection,serverAddr,clientSequenceNumber)
 	 for {
-	 	clientSequenceNumber++
-	 	data = UDPserver.MakePacket(b,clientSequenceNumber,100,100)
-		connection.WriteToUDP(data,&serverAddr)
+		 inputBytes := make([]byte, 200)
+		 connection.ReadFromUDP(inputBytes)
+		 fmt.Println("got it")
+
 	 }
 	 wg.Done()
  }
+func sendState(conn *net.UDPConn,serverAdrr  net.UDPAddr,clientSequenceNumber uint32)  {
+	b :=flatbuffers.NewBuilder(200)
+	for {
+		clientSequenceNumber++
+		data := UDPserver.MakePacket(b,clientSequenceNumber,100,100)
+		conn.WriteToUDP(data,&serverAdrr)
+	}
+}
 func main()  {
 	//client listens on port 3031
 	wg.Add(2)

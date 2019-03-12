@@ -75,25 +75,48 @@ func StartUDPserver(){
 	fmt.Println("UDP server started")
 	//wait for clients
 	waitForClients := true
+	// handshake phase
 	for waitForClients {
 		 packet :=<- receive
 		 packetType := UDPserver.GetPacketType(packet.Content)
 		 if packetType == 1 {
 			 addClient(packet,send)
 		 }else if packetType == 0{
-		 	 client,err:=getClient(&packet)
+		 	 clientIndex,err:=getClient(&packet)
 		 	 if err!=nil{
 		 	 	log.Println(err)
 			 } else {
-			 	clients[client].Connected=true
+			 	//later we gonna buffer the input
+			 	sequenceNumber,_ :=UDPserver.ReadPacket(packet.Content)
+			 	clients[clientIndex].Connected=true
+			 	clients[clientIndex].SequenceNumber=sequenceNumber
 			 }
 		 }
 		 if getConnectedClientsCount() == 2 {
 		 	waitForClients = false
 		 }
 	}
-	fmt.Println("Done and Done ")
+	fmt.Println("Clients are ready")
+	for {
+		packet:=<-receive
+		packetType := UDPserver.GetPacketType(packet.Content)
+		if packetType == 0 {
+			clientIndex,err:=getClient(&packet)
+			if err!=nil{
+				log.Println(err)
+			} else {
+				sendState(clientIndex,packet,send)
+			}
+		}
+	}
 	wg.Done()
+}
+func sendState(clientIndex int ,packet UDPserver.Bundle,send chan UDPserver.Bundle){
+	for index,element := range clients {
+		if index!=clientIndex {
+			send<-UDPserver.Bundle{Address: element.Address, Content: packet.Content}
+		}
+	}
 }
 func getConnectedClientsCount()( count int ){
 	count=0
