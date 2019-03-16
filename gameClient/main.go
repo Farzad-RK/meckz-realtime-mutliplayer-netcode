@@ -18,7 +18,7 @@ import (
 
  */
  var wg sync.WaitGroup
- func  dummyClient(port int ) {
+ func  dummyClient(port int ,token string) {
 	 addr := net.UDPAddr{
 		 Port: port,
 		 IP:  []byte{127,0,0,1},
@@ -34,45 +34,46 @@ import (
 		 Zone:""}
 	 b :=flatbuffers.NewBuilder(200)
 	 var clientSequenceNumber uint32 = 0
-	 data :=UDPserver.MakeConnPacket(b,clientSequenceNumber,"tokenA")
-	 //stop and wait protocol with 250ms delay
+	 data :=UDPserver.MakeConnPacket(b,clientSequenceNumber,token)
+	 discChannel :=make(chan bool)
+	 go connect(connection, serverAddr,data,discChannel)
 	 for {
-		 connection.WriteToUDP(data,&serverAddr)
 		 inputBytes := make([]byte, 200)
 		 connection.ReadFromUDP(inputBytes)
 		 payload := ack.GetRootAsAck(inputBytes,0)
 		 payloadType:= payload.Type()
 		 if payloadType == 2 {
-			 fmt.Println("Done")
-			 break
-		 } else {
-			 connection.WriteToUDP(data,&serverAddr)
-			 fmt.Println("resend")
+		 	discChannel<-false
+			break
 		 }
-		 time.Sleep(time.Millisecond*250)
 	 }
-	 go sendState(connection,serverAddr,clientSequenceNumber)
 	 for {
-		 inputBytes := make([]byte, 200)
-		 connection.ReadFromUDP(inputBytes)
-		 fmt.Println("got it")
-
+		 fmt.Println("state")
+		 clientSequenceNumber++
+		 data := UDPserver.MakePacket(b,clientSequenceNumber,100,100)
+		 connection.WriteToUDP(data,&serverAddr)
+		 time.Sleep(time.Millisecond*150)
 	 }
-	 wg.Done()
  }
-func sendState(conn *net.UDPConn,serverAdrr  net.UDPAddr,clientSequenceNumber uint32)  {
-	b :=flatbuffers.NewBuilder(200)
-	for {
-		clientSequenceNumber++
-		data := UDPserver.MakePacket(b,clientSequenceNumber,100,100)
-		conn.WriteToUDP(data,&serverAdrr)
+func connect(conn * net.UDPConn,addr net.UDPAddr,data [] byte,disChannel chan bool)  {
+	for{
+		select {
+
+		case<-disChannel:
+			fmt.Println("Connected")
+			return
+		default:
+			conn.WriteToUDP(data,&addr)
+			fmt.Println("sending")
+		}
+		time.Sleep(time.Millisecond*250)
 	}
 }
 func main()  {
 	//client listens on port 3031
 	wg.Add(2)
-		go dummyClient(4040)
-		go dummyClient(4041)
+		go dummyClient(4040,"tokenA")
+		go dummyClient(4041,"tokenB")
 	wg.Wait()
 
 }

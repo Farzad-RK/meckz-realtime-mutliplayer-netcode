@@ -10,13 +10,8 @@ type Bundle struct {
 	Content  []byte
 }
 
-func listen(receive chan Bundle, port int,control chan bool) {
-	addr := net.UDPAddr{
-		Port: port,
-		IP:  []byte{0,0,0,0},
-		Zone:""}
-	ServerConn, _ := net.ListenUDP("udp",&addr)
-	defer ServerConn.Close()
+func listen(receive chan Bundle,serverConn *net.UDPConn,control chan bool) {
+
 	for  {
 		select {
 		case <-control:
@@ -24,17 +19,13 @@ func listen(receive chan Bundle, port int,control chan bool) {
 			return
 		default:
 			inputBytes := make([]byte, 200)
-			_,source,_ := ServerConn.ReadFromUDP(inputBytes)
+			_,source,_ := serverConn.ReadFromUDP(inputBytes)
 			receive<-Bundle{*source,inputBytes}
 		}
 	}
 }
-func broadcast (send chan Bundle,port int ,control chan bool){
-	addr := net.UDPAddr{
-		Port: port,
-		IP:  []byte{0,0,0,0},
-		Zone:""}
-	ServerConn, _ := net.ListenUDP("udp",&addr)
+func broadcast (send chan Bundle,serverConn *net.UDPConn,control chan bool){
+
 	for  {
 		select {
 		case <-control:
@@ -42,15 +33,15 @@ func broadcast (send chan Bundle,port int ,control chan bool){
 			return
 		default:
 			payload:=<-send
-			ServerConn.WriteToUDP(payload.Content ,&payload.Address)
+			serverConn.WriteToUDP(payload.Content ,&payload.Address)
 		}
 	}
 }
-func Init(readPort int,writePort int) (chan Bundle, chan Bundle,chan bool){
+func Init(serverConn *net.UDPConn) (chan Bundle, chan Bundle,chan bool){
 	receive := make(chan Bundle, 10)
 	send := make(chan Bundle, 10)
 	control := make(chan bool)
-	go listen(receive, readPort,control)
-	go broadcast(send ,writePort,control)
+	go listen(receive,serverConn,control)
+	go broadcast(send,serverConn,control)
 	return receive, send,control
 }

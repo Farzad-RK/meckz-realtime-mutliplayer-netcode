@@ -8,6 +8,7 @@ import (
 	"meckz-netcode/UDPserver"
 	"net"
 	"net/http"
+	"runtime"
 	"sync"
 )
 
@@ -71,7 +72,13 @@ func StartHttpServer(){
 }
 
 func StartUDPserver(){
-	receive,send,_ := UDPserver.Init(3030,3033)
+	addr := net.UDPAddr{
+		Port: 3030,
+		IP:  []byte{0,0,0,0},
+		Zone:""}
+	serverConn, _ := net.ListenUDP("udp",&addr)
+	defer serverConn.Close()
+	receive,send,_ := UDPserver.Init(serverConn)
 	fmt.Println("UDP server started")
 	//wait for clients
 	waitForClients := true
@@ -97,18 +104,19 @@ func StartUDPserver(){
 		 }
 	}
 	fmt.Println("Clients are ready")
-	for {
-		packet:=<-receive
-		packetType := UDPserver.GetPacketType(packet.Content)
-		if packetType == 0 {
-			clientIndex,err:=getClient(&packet)
-			if err!=nil{
-				log.Println(err)
-			} else {
-				sendState(clientIndex,packet,send)
-			}
-		}
-	}
+
+	//for {
+	//	packet:=<-receive
+	//	packetType := UDPserver.GetPacketType(packet.Content)
+	//	if packetType == 0 {
+	//		clientIndex,err:=getClient(&packet)
+	//		if err!=nil{
+	//			log.Println(err)
+	//		} else {
+	//			sendState(clientIndex,packet,send)
+	//		}
+	//	}
+	//}
 	wg.Done()
 }
 func sendState(clientIndex int ,packet UDPserver.Bundle,send chan UDPserver.Bundle){
@@ -151,7 +159,7 @@ func addClient(packet UDPserver.Bundle,send chan UDPserver.Bundle){
 					0,
 					false}
 				//remove from registration queue
-				registrationQueue= append(registrationQueue, registrationQueue[index+1:]...)
+				registrationQueue= append(registrationQueue[:index], registrationQueue[index+1:]...)
 				clients = append(clients,newClient)
 				b:=flatbuffers.NewBuilder(200)
 				acknowledge :=UDPserver.MakeAck(b,sequenceNumber)
@@ -166,12 +174,15 @@ func addClient(packet UDPserver.Bundle,send chan UDPserver.Bundle){
 			}
 		}
 }
+func init(){
+	runtime.GOMAXPROCS(1)
+}
 func main()  {
 	clientA :=&Registration{"tokenA","keyA",1}
 	clientB :=&Registration{"tokenB","keyB",2}
 	registrationQueue = append(registrationQueue,*clientA,*clientB)
-	wg.Add(2)
-		go StartHttpServer()
+	fmt.Println(registrationQueue)
+	wg.Add(1)
 	 	go StartUDPserver()
 	wg.Wait()
 
