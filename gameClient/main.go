@@ -21,7 +21,7 @@ import (
  func  dummyClient(port int ,token string) {
 	 addr := net.UDPAddr{
 		 Port: port,
-		 IP:  []byte{127,0,0,1},
+		 IP:  []byte{0,0,0,0},
 		 Zone:""}
 	 connection,err := net.ListenUDP("udp",&addr)
 	 if err!=nil {
@@ -30,7 +30,7 @@ import (
 	 defer connection.Close()
 	 serverAddr := net.UDPAddr{
 		 Port: 3030,
-		 IP:  []byte{127,0,0,1},
+		 IP:  []byte{185,94,99,104},
 		 Zone:""}
 	 b :=flatbuffers.NewBuilder(200)
 	 var clientSequenceNumber uint32 = 0
@@ -47,6 +47,7 @@ import (
 			break
 		 }
 	 }
+	 go getState(connection)
 	 for {
 		 fmt.Println("state")
 		 clientSequenceNumber++
@@ -55,6 +56,15 @@ import (
 		 time.Sleep(time.Millisecond*150)
 	 }
  }
+func getState(conn * net.UDPConn)  {
+	for{
+		inputBytes := make([]byte, 200)
+		conn.ReadFromUDP(inputBytes)
+		payload := ack.GetRootAsAck(inputBytes,0)
+		payloadType:= payload.Type()
+		fmt.Println("got state",payloadType)
+	}
+}
 func connect(conn * net.UDPConn,addr net.UDPAddr,data [] byte,disChannel chan bool)  {
 	for{
 		select {

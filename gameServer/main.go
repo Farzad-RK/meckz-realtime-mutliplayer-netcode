@@ -104,28 +104,33 @@ func StartUDPserver(){
 		 }
 	}
 	fmt.Println("Clients are ready")
-
-	//for {
-	//	packet:=<-receive
-	//	packetType := UDPserver.GetPacketType(packet.Content)
-	//	if packetType == 0 {
-	//		clientIndex,err:=getClient(&packet)
-	//		if err!=nil{
-	//			log.Println(err)
-	//		} else {
-	//			sendState(clientIndex,packet,send)
-	//		}
-	//	}
-	//}
-	wg.Done()
-}
-func sendState(clientIndex int ,packet UDPserver.Bundle,send chan UDPserver.Bundle){
-	for index,element := range clients {
-		if index!=clientIndex {
-			send<-UDPserver.Bundle{Address: element.Address, Content: packet.Content}
+	for {
+		packet:=<-receive
+		packetType := UDPserver.GetPacketType(packet.Content)
+		if packetType == 0 {
+			clientIndex,err:=getClient(&packet)
+			fmt.Println(clientIndex)
+			if err!=nil{
+				log.Println(err)
+			} else {
+				for index,element := range clients {
+					if index!=clientIndex {
+						fmt.Println("sending to",element.Address)
+						send<-UDPserver.Bundle{Address: element.Address, Content: packet.Content}
+					}
+				}
+			}
 		}
 	}
+	wg.Done()
 }
+//func sendState(clientIndex int ,packet UDPserver.Bundle,send chan UDPserver.Bundle){
+//	for index,element := range clients {
+//		if index!=clientIndex {
+//			send<-UDPserver.Bundle{Address: element.Address, Content: packet.Content}
+//		}
+//	}
+//}
 func getConnectedClientsCount()( count int ){
 	count=0
 	for _,element:= range clients {
